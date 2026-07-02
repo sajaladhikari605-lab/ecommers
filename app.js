@@ -1,10 +1,15 @@
 const express = require('express');
 const app = express();
+require("dotenv").config()
+
+
+
 // dns
 const dns = require('dns');
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 
-
+// Load environment variables
+require("dotenv").config()
 
 
 
@@ -23,7 +28,11 @@ connectDB();
 
 // routes heres
 const authRoutes = require("./routes/auth/authRoutes")
+const productRoutes = require("./routes/admine/productRoutes/productRoute")
+const profileRoutes = require("./routes/user/myprofile/profileRoutes")
+app.use("/api/admin", productRoutes)
 app.use("/api/auth", authRoutes)
+app.use("/api/user",profileRoutes)
 
 
 app.get("/", (req, res) => {
@@ -38,6 +47,7 @@ app.get("/", (req, res) => {
 
 
 // Start the server
-app.listen(3000, () => {
-    console.log("server is running on port 3000");
+const port = process.env.PORT || 3000
+app.listen(port, () => {
+    console.log(`server is running on port ${port}`);
 })

@@ -1,15 +1,39 @@
 //  database/connection.js
 const mongoose = require('mongoose');
+const User = require("../models/UserModel")
+const bcrypt = require("bcrypt")
 
 
 
 const connectDB = async () => {
-    try{
-        await mongoose.connect("mongodb+srv://sajaladhikari605_db_user:nalFkPSkKPK6R6Gk@cluster0.6bvc8pl.mongodb.net/?appName=Cluster0")
-        console.log("connected to database successfully");
-    }catch(error){
-        console.error("error connecting to database", error);   
+    try {
+        await mongoose.connect(process.env.MONGODB_URI)
+        console.log("DB Connected")
+    } catch (error) {
+        console.error("DB Connection Failed", error)
+    }
+    // Admin seeding code goes here
+    const adminEmail = process.env.ADMIN_EMAIL
+    const adminPassword = process.env.ADMIN_PASSWORD
+
+    const existingAdmin = await User.findOne({
+        userEmail: adminEmail,
+        userRole: "seller"
+    })
+
+    if (!existingAdmin) {
+        await User.create({
+            userEmail: adminEmail,
+            userPassword: await bcrypt.hash(adminPassword, 10),
+            userRole: "seller",
+            userName: "Admin",
+            userPhoneNumber: "000000000000"
+        })
+        console.log("Admin user created")
+    }else{
+        console.log("Admin user already exists")
     }
 }
+
 
 module.exports = connectDB;
