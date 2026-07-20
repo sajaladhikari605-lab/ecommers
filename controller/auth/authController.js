@@ -3,6 +3,9 @@ const bcrypt = require("bcrypt");
 const sendEmail = require("../../services/sendemail");
 const jwt = require("jsonwebtoken");
 
+const getRequestBody = (req) => {
+    return req.body && typeof req.body === "object" ? req.body : {};
+};
 
 // Regiser User
 
@@ -16,7 +19,7 @@ const jwt = require("jsonwebtoken");
 */
 
 const registerUser = async (req, res) => {
-    const { userEmail, userPhoneNumber, userName, userPassword } = req.body;
+    const { userEmail, userPhoneNumber, userName, userPassword } = getRequestBody(req);
     if (!userEmail || !userPhoneNumber || !userName || !userPassword) {
         return res.status(400).json({
             message: "All fields are required"
@@ -61,7 +64,7 @@ const registerUser = async (req, res) => {
 5. Send a response to the client
 */
 const loginUser = async (req, res) => {
-    const { userEmail, userPassword } = req.body;
+    const { userEmail, userPassword } = getRequestBody(req);
 
     if (!userEmail || !userPassword) {
         return res.status(400).json({
@@ -112,15 +115,15 @@ const loginUser = async (req, res) => {
 */
 
 const forgotPassword = async (req, res) => {
-    const { userEmail } = req.body;
+    const { userEmail } = getRequestBody(req);
     if (!userEmail) {
         return res.status(400).json({
             message: "Email is required"
         })
     }
-    const existingUser = await User.findOne({ // Object from the database
+    const existingUser = await User.findOne({ 
         userEmail
-    })
+    });
 
     if (!existingUser) {
         return res.status(400).json({
@@ -149,7 +152,7 @@ const forgotPassword = async (req, res) => {
 // Verify OTP
 
 const verifyOtp = async (req, res) => {
-    const { userEmail, otp } = req.body;
+    const { userEmail, otp } = getRequestBody(req);
     if (!userEmail || !otp) {
         return res.status(400).json({
             message: "Email and OTP are required"
@@ -200,7 +203,7 @@ const verifyOtp = async (req, res) => {
 
 // Reset Password
 const resetPassword = async (req, res) => {
-    const { userEmail, newPassword, confirmPassword } = req.body;
+    const { userEmail, newPassword, confirmPassword } = getRequestBody(req);
     if (!userEmail || !newPassword || !confirmPassword) {
         return res.status(400).json({
             message: "Email and new password are required"
