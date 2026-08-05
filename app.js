@@ -32,6 +32,7 @@ const globalRoutes = require("./routes/global/globalRoutes")
 const cartRoutes = require("./routes/user/myprofile/cart/cartRoutes")
 const orderRoutes = require("./routes/user/myprofile/order/orderRoutes")
 const reviewRoutes = require("./routes/user/myprofile/review/reviewRoutes")
+const adminOrderRoutes = require("./routes/admin/orderRoutes/orderRoutes")
 
 app.use("/api/admin/product", productRoutes)
 app.use("/api/auth", authRoutes)
@@ -40,6 +41,7 @@ app.use("/api/globals", globalRoutes)
 app.use("/api/user/cart", cartRoutes)
 app.use("/api/user", orderRoutes)
 app.use("/api/user/review", reviewRoutes)
+app.use("/api/admin/order", adminOrderRoutes)
 
 app.get("/", (req, res)=>{
     res.send("<h1>Project chalirako xa! Hami backend handai xum! UI paxi banaune ho!</h1>")
