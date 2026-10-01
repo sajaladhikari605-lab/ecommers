@@ -9,6 +9,6 @@ router.route("/order")
   .post(isAuthenticated, checkRole("customer"), catchAsync(createOrder))
   .get(isAuthenticated, checkRole("customer"), catchAsync(getMyOrders));
 router.route("/order/:orderId")
-  .get(isAuthenticated, checkRole("customer"), catchAsync(updateMyOrder));
+  .patch(isAuthenticated, checkRole("customer"), catchAsync(updateMyOrder));
 router.route("/order/:orderId").delete(isAuthenticated, checkRole("customer"), catchAsync(deleteMyOrder));
 module.exports = router

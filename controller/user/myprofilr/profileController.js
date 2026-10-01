@@ -26,8 +26,9 @@ const updateMyProfile = async (req, res) => {
         return res.status(404).json({ message: "User not found" })
     }
 
+    const normalizedEmail = userEmail.trim().toLowerCase();
     const existingUserWithEmail = await User.findOne({
-        userEmail: userEmail,
+        userEmail: normalizedEmail,
         _id: { $ne: userId }
     })
 
@@ -37,9 +38,9 @@ const updateMyProfile = async (req, res) => {
 
     const updatedUser = await User.findByIdAndUpdate(userId, {
         userName,
-        userEmail,
+        userEmail: normalizedEmail,
         userPhoneNumber
-    })
+    }, { new: true, runValidators: true }).select("-userPassword -otp -createdAt -updatedAt -__v -isOtpVerified")
     res.status(200).json({
         message: "User profile updated successfully",
         data: updatedUser
@@ -65,8 +66,6 @@ const deleteMyProfile = async (req, res) => {
 const updateMyPassword = async (req, res) => {
     const userId = req.user._id;
     const { oldPassword, newPassword } = req.body;
-    console.log(oldPassword, newPassword, "haahah")
-
     if (!oldPassword || !newPassword) {
         return res.status(400).json({ message: "Please provide all required fields" })
     }

@@ -11,6 +11,7 @@ const connectDB = async () => {
         console.log("DB Connected")
     } catch (error) {
         console.error("DB Connection Failed", error)
+        throw error
     }
     // Admin seeding code goes here
     const adminEmail = process.env.ADMIN_EMAIL

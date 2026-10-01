@@ -3,15 +3,12 @@ const Product = require('../../../models/productModule');
 // create product
 const createProduct = async (req, res) => {
     const { productName, productDescription, productStockQty, productStatus, productPrice } = req.body;
-    console.log(req.body)
-    if (!productName || !productDescription || !productStockQty || !productStatus || !productPrice) {
+    if (!productName || !productDescription || productStockQty === undefined || productStockQty === "" || !productStatus || productPrice === undefined || productPrice === "") {
         return res.status(400).json({ message: "All fields are required " });
     }
     const file = req.file;
     if (!file){
         return res.status(400).json({ message: "Product image is required" });
-    } else {
-        const filePath = file.filename;
     }
 
     await Product.create({

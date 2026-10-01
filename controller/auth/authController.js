@@ -7,6 +7,18 @@ const getRequestBody = (req) => {
     return req.body && typeof req.body === "object" ? req.body : {};
 };
 
+const toPublicUser = (user) => ({
+    id: user._id,
+    userEmail: user.userEmail,
+    userName: user.userName,
+    userPhoneNumber: user.userPhoneNumber,
+    userRole: user.userRole === "seller" ? "admin" : user.userRole === "customer" ? "student" : user.userRole,
+    gender: user.gender,
+    dateOfBirth: user.dateOfBirth,
+    address: user.address,
+    profilePicture: user.profilePicture
+});
+
 // Regiser User
 
 /*
@@ -19,20 +31,25 @@ const getRequestBody = (req) => {
 */
 
 const registerUser = async (req, res) => {
-    const { userEmail, userPhoneNumber, userName, userPassword } = getRequestBody(req);
+    const { userPhoneNumber, userName, userPassword, gender, dateOfBirth, address } = getRequestBody(req);
+    const userEmail = getRequestBody(req).userEmail?.trim().toLowerCase();
     if (!userEmail || !userPhoneNumber || !userName || !userPassword) {
         return res.status(400).json({
             message: "All fields are required"
         })
     }
 
+    if (typeof userPassword !== "string" || userPassword.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
+    }
+
     const existingUser = await User.findOne({
-        userEmail
+        $or: [{ userEmail }, { userPhoneNumber }]
     })
 
     if (existingUser) {
-        return res.status(400).json({
-            message: "User already exists! Try login instead"
+        return res.status(409).json({
+            message: "An account with this email or phone number already exists"
         })
     }
 
@@ -40,13 +57,17 @@ const registerUser = async (req, res) => {
         userEmail,
         userPhoneNumber,
         userName,
-        userPassword: await bcrypt.hash(userPassword, 10)
+        userPassword: await bcrypt.hash(userPassword, 10),
+        gender,
+        dateOfBirth,
+        address,
+        userRole: "student"
     })
 
     sendEmail({
         userEmail,
-        subject: "Welcome to our E-commerce Platform",
-        text: `Hi ${userName},\n\nThank you for registering on our e-commerce platform. We're excited to have you on board! If you have any questions or need assistance, feel free to reach out to our support team.\n\nBest regards,\nE-commerce Team`
+        subject: "Welcome to Smart College Management System",
+        text: `Hi ${userName},\n\nYour student account has been created.\n\nSmart College Management System`
     })
 
     return res.status(201).json({
@@ -64,7 +85,8 @@ const registerUser = async (req, res) => {
 5. Send a response to the client
 */
 const loginUser = async (req, res) => {
-    const { userEmail, userPassword } = getRequestBody(req);
+    const { userPassword } = getRequestBody(req);
+    const userEmail = getRequestBody(req).userEmail?.trim().toLowerCase();
 
     if (!userEmail || !userPassword) {
         return res.status(400).json({
@@ -77,31 +99,80 @@ const loginUser = async (req, res) => {
     })
 
     if (!existingUser) {
-        return res.status(400).json({
-            message: "User not found! Try registering instead"
+        return res.status(401).json({
+            message: "Invalid email or password"
         })
+    }
+
+    if (!existingUser.isActive) {
+        return res.status(403).json({ message: "This account has been deactivated" });
     }
 
     const isPasswordValid = await bcrypt.compare(userPassword, existingUser.userPassword);
 
     if (!isPasswordValid) {
-        return res.status(400).json({
+        return res.status(401).json({
             message: "Invalid password or email"
         })
     }
 
     // JWT token generation logic can be implemented here
     const token = jwt.sign({
-        userId: existingUser._id
+        userId: existingUser._id,
+        tokenVersion: existingUser.tokenVersion || 0
     }, process.env.JWT_SECRET, {
         expiresIn: "30d"
     })
 
     return res.status(200).json({
         message: "Login successful",
-        token: token // In a real application, you would generate a JWT token here  
+        token,
+        user: toPublicUser(existingUser)
     })
 }
+
+const getCurrentUser = async (req, res) => {
+    return res.status(200).json({ success: true, data: toPublicUser(req.user) });
+};
+
+const updateCurrentUser = async (req, res) => {
+    const allowedFields = ["userName", "userEmail", "userPhoneNumber", "gender", "dateOfBirth", "address", "profilePicture"];
+    const updates = Object.fromEntries(allowedFields.filter((field) => req.body[field] !== undefined).map((field) => [field, req.body[field]]));
+    if (updates.userEmail !== undefined) updates.userEmail = String(updates.userEmail).trim().toLowerCase();
+    if (updates.profilePicture && !/^\/uploads\/college\/[0-9a-f-]{36}\.(jpg|png|webp)$/i.test(updates.profilePicture)) {
+        return res.status(400).json({ success: false, message: "Invalid profile image reference" });
+    }
+    if (!Object.keys(updates).length) return res.status(400).json({ success: false, message: "Provide at least one profile field to update" });
+    if (updates.userEmail || updates.userPhoneNumber) {
+        const duplicateQuery = [];
+        if (updates.userEmail) duplicateQuery.push({ userEmail: updates.userEmail });
+        if (updates.userPhoneNumber) duplicateQuery.push({ userPhoneNumber: updates.userPhoneNumber });
+        const duplicate = await User.findOne({ $or: duplicateQuery, _id: { $ne: req.user._id } }).select("_id");
+        if (duplicate) return res.status(409).json({ success: false, message: "Email or phone number is already in use" });
+    }
+    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
+    return res.json({ success: true, message: "Profile updated", data: toPublicUser(user) });
+};
+
+const changeCurrentPassword = async (req, res) => {
+    const { currentPassword, newPassword } = getRequestBody(req);
+    if (!currentPassword || !newPassword || newPassword.length < 8) {
+        return res.status(400).json({ success: false, message: "Provide your current password and a new password of at least 8 characters" });
+    }
+    const valid = await bcrypt.compare(currentPassword, req.user.userPassword);
+    if (!valid) return res.status(401).json({ success: false, message: "Current password is incorrect" });
+    req.user.userPassword = await bcrypt.hash(newPassword, 10);
+    req.user.tokenVersion = (req.user.tokenVersion || 0) + 1;
+    await req.user.save();
+    const token = jwt.sign({ userId: req.user._id, tokenVersion: req.user.tokenVersion }, process.env.JWT_SECRET, { expiresIn: "30d" });
+    return res.json({ success: true, message: "Password updated and other sessions signed out", token });
+};
+
+const logoutUser = async (req, res) => {
+    req.user.tokenVersion = (req.user.tokenVersion || 0) + 1;
+    await req.user.save();
+    return res.status(200).json({ success: true, message: "Logged out successfully" });
+};
 
 // Forgot Password and Send OTP
 
@@ -247,6 +318,7 @@ const resetPassword = async (req, res) => {
 
     existingUser.userPassword = await bcrypt.hash(newPassword, 10);
     existingUser.isOtpVerified = false;
+    existingUser.tokenVersion = (existingUser.tokenVersion || 0) + 1;
     await existingUser.save();
 
     return res.status(200).json({
@@ -262,6 +334,10 @@ module.exports = {
 
     registerUser,
     loginUser,
+    getCurrentUser,
+    updateCurrentUser,
+    changeCurrentPassword,
+    logoutUser,
   forgotPassword,
     verifyOtp,
     resetPassword

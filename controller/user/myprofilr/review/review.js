@@ -8,6 +8,10 @@ const createReview = async (req, res) => {
 
     const { rating, message } = req.body;
 
+    if (!Number.isInteger(Number(rating)) || Number(rating) < 1 || Number(rating) > 5 || !message?.trim()) {
+        return res.status(400).json({ message: "A rating from 1 to 5 and a review message are required" });
+    }
+
     const productExists = await Product.findById(productId);
     if (!productExists) {
         return res.status(404).json({ message: "Product not found" });
@@ -16,8 +20,8 @@ const createReview = async (req, res) => {
     await Review.create({
         userId,
         productId,
-        rating,
-        message
+        rating: Number(rating),
+        message: message.trim()
     })
 
     res.status(201).json({ message: "Review created successfully" });
@@ -56,7 +60,7 @@ const deleteReview = async (req, res) => {
         return res.status(404).json({ message: "Review not found" });
     }
     const ownerId = review.userId // Get the owner ID of the review
-    if (userId != ownerId) {
+    if (userId.toString() !== ownerId.toString()) {
         return res.status(403).json({ message: "You are not authorized to delete this review" });
     }
 

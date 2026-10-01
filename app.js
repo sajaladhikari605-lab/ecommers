@@ -1,4 +1,7 @@
 const express = require('express');
+const cors = require('cors');
+const path = require("path");
+const isAuthenticated = require("./middleware/isAuthenticated");
 const app = express();
 require("dotenv").config()
 
@@ -14,14 +17,18 @@ const connectDB = require("./database/connection")
 // Load environment variables
 require("dotenv").config()
 
-// Connect to the database
-connectDB()
-
 // Middleware for parsing JSON data
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+    .split(",")
+    .map((origin) => origin.trim());
+app.use(cors({
+    origin: (origin, callback) => callback(null, !origin || allowedOrigins.includes(origin))
+}))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 // Access to uploads folder
+app.use("/uploads/college", isAuthenticated, express.static(path.join(__dirname, "uploads/college")));
 app.use("/uploads", express.static("uploads"))
 
 // Routes heres
@@ -33,6 +40,7 @@ const cartRoutes = require("./routes/user/myprofile/cart/cartRoutes")
 const orderRoutes = require("./routes/user/myprofile/order/orderRoutes")
 const reviewRoutes = require("./routes/user/myprofile/review/reviewRoutes")
 const adminOrderRoutes = require("./routes/admin/orderRoutes/orderRoutes")
+const collegeRoutes = require("./routes/collegeRoutes")
 
 app.use("/api/admin/product", productRoutes)
 app.use("/api/auth", authRoutes)
@@ -42,21 +50,38 @@ app.use("/api/user/cart", cartRoutes)
 app.use("/api/user", orderRoutes)
 app.use("/api/user/review", reviewRoutes)
 app.use("/api/admin/order", adminOrderRoutes)
+app.use("/api/college", collegeRoutes)
 
 app.get("/", (req, res)=>{
     res.send("<h1>Project chalirako xa! Hami backend handai xum! UI paxi banaune ho!</h1>")
 })
 
-
-
-
-
-
-
-
-
-// Start the server
-const port = process.env.PORT || 3000;
-app.listen(port, ()=>{
-    console.log(`Server is running on port ${port}`);
+app.get("/api/health", (req, res) => {
+    res.status(200).json({
+        status: "ok",
+        database: require("mongoose").connection.readyState === 1 ? "connected" : "disconnected"
+    })
 })
+
+
+
+
+
+
+
+
+
+const port = process.env.PORT || 3000;
+
+const startServer = async () => {
+    try {
+        await connectDB()
+        app.listen(port, ()=>{
+            console.log(`Server is running on port ${port}`);
+        })
+    } catch (error) {
+        process.exitCode = 1
+    }
+}
+
+startServer()

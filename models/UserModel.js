@@ -21,9 +21,28 @@ const userSchema = new mongoose.Schema({
     },
     userRole: {
         type: String,
-        enum: ['seller', 'customer'],
-        default: 'customer'
+        enum: ['admin', 'teacher', 'student', 'accountant', 'seller', 'customer'],
+        default: 'student'
     },
+    gender: {
+        type: String,
+        enum: ['female', 'male', 'non-binary', 'prefer-not-to-say', '']
+    },
+    dateOfBirth: Date,
+    address: String,
+    profilePicture: String,
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    tokenVersion: {
+        type: Number,
+        default: 0
+    },
+    cart: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product'
+    }],
     otp: {
         type: Number,
         default: null

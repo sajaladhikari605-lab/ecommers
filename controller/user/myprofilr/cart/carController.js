@@ -22,10 +22,15 @@ const addToCart = async (req, res) => {
         return res.status(404).json({ message: "User not found" })
     }
 
-    user.cart.push(productId)
+    if (!user.cart.some(item => item.toString() === productId)) {
+        user.cart.push(productId)
+    }
     await user.save()
 
-    return res.status(200).json({ message: "Product added to cart successfully" })
+    return res.status(200).json({
+        message: "Product added to cart successfully",
+        cartItems: user.cart
+    })
 }
 // getCartItems
 

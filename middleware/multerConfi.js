@@ -9,10 +9,6 @@ const storage = multer.diskStorage({
             return cb(new Error("Invalid file type. Only JPEG, PNG, JPG, GIF, and WEBP are allowed."))
         }
 
-        // check file size
-        if (file.size > 2 * 1024 * 1024) { // 2MB
-            return cb(new Error("File size exceeds the limit of 2MB."))
-        }
         cb(null, "uploads/")
     },
     filename: function (req, file, cb) {

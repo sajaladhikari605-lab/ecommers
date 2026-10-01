@@ -6,7 +6,10 @@ const { storage, multer } = require('../../../middleware/multerConfi');
 const catchAsync = require('../../../services/catchAsync');
 
 const router = require('express').Router();
-const upload = multer({ storage: storage })
+const upload = multer({
+	storage,
+	limits: { fileSize: 2 * 1024 * 1024 }
+})
 
 // Restful API routes for product management
 router.route("/create").post(isAuthenticated, checkRole("seller"), upload.single("productImage"), catchAsync (createProduct))
