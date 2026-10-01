@@ -18,9 +18,13 @@ const connectDB = require("./database/connection")
 require("dotenv").config()
 
 // Middleware for parsing JSON data
-const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173" ||"https://scms-ashen.vercel.app")
-    .split(",")
-    .map((origin) => origin.trim());
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://scms-ashen.vercel.app",
+    ...(process.env.CLIENT_URL || "").split(",")
+]
+    .map((origin) => origin.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
 app.use(cors({
     origin: (origin, callback) => callback(null, !origin || allowedOrigins.includes(origin))
 }))
